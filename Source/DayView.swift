@@ -16,8 +16,8 @@ public protocol DayViewDelegate: class {
 
 public class DayView: UIView {
 
-  public weak var dataSource: DayViewDataSource?
-  public weak var delegate: DayViewDelegate?
+  open weak var dataSource: DayViewDataSource?
+  open weak var delegate: DayViewDelegate?
 
   /// Hides or shows header view
   public var isHeaderViewVisible = true {
