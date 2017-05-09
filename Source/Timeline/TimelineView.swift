@@ -7,6 +7,14 @@ protocol TimelineViewDelegate: class {
   func timelineView(_ timelineView: TimelineView, didLongPressAt hour: Int)
 }
 
+public enum TimeLineInterval: Int {
+    case TimeLineInterval1Hour = 1
+    case TimeLineInterval30Minutes = 2
+    case TimeLineInterval15Minutes = 4
+    case TimeLineInterval10Minutes = 6
+}
+
+
 public class TimelineView: UIView, ReusableView {
 
   weak var delegate: TimelineViewDelegate?
@@ -45,6 +53,8 @@ public class TimelineView: UIView, ReusableView {
   var timeFont: UIFont {
     return UIFont.boldSystemFont(ofSize: fontSize)
   }
+    
+  var timeLineInterval = TimeLineInterval.TimeLineInterval1Hour
 
   var verticalDiff: CGFloat = 45
   var verticalInset: CGFloat = 10
@@ -53,7 +63,8 @@ public class TimelineView: UIView, ReusableView {
   var horizontalEventInset: CGFloat = 3
 
   var fullHeight: CGFloat {
-    return verticalInset * 2 + verticalDiff * 24
+    //return verticalInset * 2 + verticalDiff * 24
+    return verticalInset * 2 + verticalDiff * 24 * CGFloat(self.timeLineInterval.rawValue)
   }
 
   var calendarWidth: CGFloat {
@@ -75,11 +86,13 @@ public class TimelineView: UIView, ReusableView {
   }
 
   var times: [String] {
-    return is24hClock ? _24hTimes : _12hTimes
+    //return is24hClock ? _24hTimes : _12hTimes
+    return is24hClock ? Generator.timeString24H_MIN(by: self.timeLineInterval) : _12hTimes
   }
 
   fileprivate lazy var _12hTimes: [String] = Generator.timeStrings12H()
   fileprivate lazy var _24hTimes: [String] = Generator.timeStrings24H()
+    
   
   fileprivate lazy var longPressGestureRecognizer: UILongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(longPress(_:)))
 
@@ -278,13 +291,16 @@ public class TimelineView: UIView, ReusableView {
   fileprivate func dateToY(_ date: Date) -> CGFloat {
     if date.dateOnly() > self.date.dateOnly() {
       // Event ending the next day
-      return 24 * verticalDiff + verticalInset
+      //return 24 * verticalDiff + verticalInset
+      return (24 * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
     } else if date.dateOnly() < self.date.dateOnly() {
       // Event starting the previous day
       return verticalInset
     } else {
-      let hourY = CGFloat(date.hour) * verticalDiff + verticalInset
-      let minuteY = CGFloat(date.minute) * verticalDiff / 60
+      //let hourY = CGFloat(date.hour) * verticalDiff + verticalInset
+      let hourY = CGFloat(date.hour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
+      //let minuteY = CGFloat(date.minute) * verticalDiff / 60
+      let minuteY = CGFloat(date.minute) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) / 60
       return hourY + minuteY
     }
   }

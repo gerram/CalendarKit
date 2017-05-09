@@ -28,6 +28,15 @@ public class DayView: UIView {
       setNeedsLayout()
     }
   }
+    
+    // Change timeline step interval
+    public var timeLineInterval = TimeLineInterval.TimeLineInterval1Hour {
+        didSet {
+            self.timelinePager.removeFromSuperview()
+            self.timelinePager = PagingScrollView<TimelineContainer>()
+            self.configureTimelinePager()
+        }
+    }
 
   public var timelineScrollOffset: CGPoint {
     // Any view is fine as they are all synchronized
@@ -40,7 +49,7 @@ public class DayView: UIView {
   var autoScrollToFirstEvent = false
 
   let dayHeaderView = DayHeaderView()
-  let timelinePager = PagingScrollView<TimelineContainer>()
+  var timelinePager = PagingScrollView<TimelineContainer>()
   var timelineSynchronizer: ScrollSynchronizer?
 
   var currentDate = Date().dateOnly()
@@ -113,6 +122,7 @@ public class DayView: UIView {
     var verticalScrollViews = [TimelineContainer]()
     for i in -1...1 {
       let timeline = TimelineView(frame: bounds)
+      timeline.timeLineInterval = self.timeLineInterval
       timeline.delegate = self
       timeline.eventViewDelegate = self
       timeline.frame.size.height = timeline.fullHeight
