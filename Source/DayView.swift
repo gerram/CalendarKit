@@ -32,10 +32,21 @@ public class DayView: UIView {
     // Change timeline step interval
     public var timeLineInterval = TimeLineInterval.TimeLineInterval1Hour {
         didSet {
-            self.timelinePager.removeFromSuperview()
-            self.timelinePager = PagingScrollView<TimelineContainer>()
-            self.configureTimelinePager()
+            self.timeLinePagerReload()
         }
+    }
+    
+    public var timeLineHoursPayload = TimeLineHoursPayload() {
+        didSet {
+            self.timeLinePagerReload()
+        }
+    }
+    
+    private func timeLinePagerReload() {
+        self.timelinePager.removeFromSuperview()
+        self.timelinePager = PagingScrollView<TimelineContainer>()
+        self.configureTimelinePager()
+        setNeedsLayout()
     }
 
   public var timelineScrollOffset: CGPoint {
@@ -123,6 +134,7 @@ public class DayView: UIView {
     for i in -1...1 {
       let timeline = TimelineView(frame: bounds)
       timeline.timeLineInterval = self.timeLineInterval
+      timeline.timeLineHoursPayload = self.timeLineHoursPayload
       timeline.delegate = self
       timeline.eventViewDelegate = self
       timeline.frame.size.height = timeline.fullHeight

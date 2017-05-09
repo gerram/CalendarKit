@@ -1,4 +1,5 @@
 import UIKit
+import Foundation
 import Neon
 import DateToolsSwift
 
@@ -14,6 +15,28 @@ public enum TimeLineInterval: Int {
     case TimeLineInterval10Minutes = 6
 }
 
+public struct TimeLineHoursPayload {
+    public var startHour: Int = 0
+    public var endHour: Int = 23
+    
+    var payload: ClosedRange<Int> {
+        get {
+            return self.startHour...self.endHour
+        }
+    }
+    
+    func checkTime(time: String) -> Bool {
+        //FIXME: Make formatter in some global place
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm"
+        if let dateTime = dateFormatter.date(from: time) {
+            if self.payload.contains(dateTime.hour) {
+                return true
+            }
+        }
+        return false
+    }
+}
 
 public class TimelineView: UIView, ReusableView {
 
@@ -54,7 +77,8 @@ public class TimelineView: UIView, ReusableView {
     return UIFont.boldSystemFont(ofSize: fontSize)
   }
     
-  var timeLineInterval = TimeLineInterval.TimeLineInterval1Hour
+    var timeLineInterval: TimeLineInterval = TimeLineInterval.TimeLineInterval1Hour
+    var timeLineHoursPayload: TimeLineHoursPayload = TimeLineHoursPayload()
 
   var verticalDiff: CGFloat = 45
   var verticalInset: CGFloat = 10
@@ -64,7 +88,8 @@ public class TimelineView: UIView, ReusableView {
 
   var fullHeight: CGFloat {
     //return verticalInset * 2 + verticalDiff * 24
-    return verticalInset * 2 + verticalDiff * 24 * CGFloat(self.timeLineInterval.rawValue)
+    //return verticalInset * 2 + verticalDiff * 24 * CGFloat(self.timeLineInterval.rawValue)
+    return verticalInset * 2 + verticalDiff * CGFloat(self.timeLineHoursPayload.payload.count) * CGFloat(self.timeLineInterval.rawValue)
   }
 
   var calendarWidth: CGFloat {
@@ -140,60 +165,75 @@ public class TimelineView: UIView, ReusableView {
 
   override public func draw(_ rect: CGRect) {
     super.draw(rect)
-
-    var hourToRemoveIndex = -1
-
-    if isToday {
-      let minute = currentTime.minute
-      if minute > 39 {
-        hourToRemoveIndex = currentTime.hour + 1
-      } else if minute < 21 {
-        hourToRemoveIndex = currentTime.hour
-      }
+        self.layoutTimes()
     }
-
-    let style = NSParagraphStyle.default.mutableCopy() as! NSMutableParagraphStyle
-    style.lineBreakMode = .byWordWrapping
-    style.alignment = .right
-
-    let attributes = [NSParagraphStyleAttributeName: style,
-                      NSForegroundColorAttributeName: self.style.timeColor,
-                      NSFontAttributeName: timeFont] as [String : Any]
-
-    for (i, time) in times.enumerated() {
-      let iFloat = CGFloat(i)
-      let context = UIGraphicsGetCurrentContext()
-      context!.interpolationQuality = .none
-      context?.saveGState()
-      context?.setStrokeColor(self.style.lineColor.cgColor)
-      context?.setLineWidth(onePixel)
-      context?.translateBy(x: 0, y: 0.5)
-      let x: CGFloat = 53
-      let y = verticalInset + iFloat * verticalDiff
-      context?.beginPath()
-      context?.move(to: CGPoint(x: x, y: y))
-      context?.addLine(to: CGPoint(x: (bounds).width, y: y))
-      context?.strokePath()
-      context?.restoreGState()
-
-      if i == hourToRemoveIndex { continue }
-
-      let timeRect = CGRect(x: 2, y: iFloat * verticalDiff + verticalInset - 7,
-                            width: leftInset - 8, height: fontSize + 2)
-
-      let timeString = NSString(string: time)
-
-      timeString.draw(in: timeRect, withAttributes: attributes)
-    }
-  }
 
   override public func layoutSubviews() {
     super.layoutSubviews()
+    layoutTimes()
     recalculateEventLayout()
     layoutEvents()
     layoutNowLine()
   }
 
+    func layoutTimes() {
+        /*
+        var hourToRemoveIndex = -1
+        
+        if isToday {
+            let minute = currentTime.minute
+            if minute > 39 {
+                hourToRemoveIndex = currentTime.hour + 1
+            } else if minute < 21 {
+                hourToRemoveIndex = currentTime.hour
+            }
+        }
+        */
+        
+        let style = NSParagraphStyle.default.mutableCopy() as! NSMutableParagraphStyle
+        style.lineBreakMode = .byWordWrapping
+        style.alignment = .right
+        
+        let attributes = [NSParagraphStyleAttributeName: style,
+                          NSForegroundColorAttributeName: self.style.timeColor,
+                          NSFontAttributeName: timeFont] as [String : Any]
+        
+        for (i, time) in times.enumerated() {
+            if self.timeLineHoursPayload.checkTime(time: time) {
+                let iFloat = CGFloat(i)
+                let context = UIGraphicsGetCurrentContext()
+                //context!.interpolationQuality = .none
+                context?.interpolationQuality = .none
+                context?.saveGState()
+                context?.setStrokeColor(self.style.lineColor.cgColor)
+                context?.setLineWidth(onePixel)
+                context?.translateBy(x: 0, y: 0.5)
+                let x: CGFloat = 53
+                //let y = verticalInset + iFloat * verticalDiff
+                let y = verticalInset + (iFloat - CGFloat(self.timeLineHoursPayload.startHour * self.timeLineInterval.rawValue)) * verticalDiff
+                context?.beginPath()
+                context?.move(to: CGPoint(x: x, y: y))
+                context?.addLine(to: CGPoint(x: (bounds).width, y: y))
+                context?.strokePath()
+                context?.restoreGState()
+                
+                //print("\(i)")
+                /*
+                if i == hourToRemoveIndex {
+                    continue
+                }
+                */
+                
+                //let timeRect = CGRect(x: 2, y: iFloat * verticalDiff + verticalInset - 7, width: leftInset - 8, height: fontSize + 2)
+                let timeRect = CGRect(x: 2, y: (iFloat - CGFloat(self.timeLineHoursPayload.startHour * self.timeLineInterval.rawValue)) * verticalDiff + verticalInset - 7, width: leftInset - 8, height: fontSize + 2)
+                
+                let timeString = NSString(string: time)
+                
+                timeString.draw(in: timeRect, withAttributes: attributes)
+            }
+        }
+    }
+    
   func layoutNowLine() {
     if !isToday {
       nowLine.alpha = 0
@@ -292,13 +332,15 @@ public class TimelineView: UIView, ReusableView {
     if date.dateOnly() > self.date.dateOnly() {
       // Event ending the next day
       //return 24 * verticalDiff + verticalInset
-      return (24 * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
+      //return (24 * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
+      return (CGFloat(self.timeLineHoursPayload.payload.count) * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
     } else if date.dateOnly() < self.date.dateOnly() {
       // Event starting the previous day
       return verticalInset
     } else {
       //let hourY = CGFloat(date.hour) * verticalDiff + verticalInset
-      let hourY = CGFloat(date.hour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
+      //let hourY = CGFloat(date.hour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
+      let hourY = CGFloat(date.hour - self.timeLineHoursPayload.startHour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
       //let minuteY = CGFloat(date.minute) * verticalDiff / 60
       let minuteY = CGFloat(date.minute) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) / 60
       return hourY + minuteY
