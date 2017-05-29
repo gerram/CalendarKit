@@ -63,7 +63,7 @@ public class DayView: UIView {
   var timelinePager = PagingScrollView<TimelineContainer>()
   var timelineSynchronizer: ScrollSynchronizer?
 
-  var currentDate = Date().dateOnly()
+  public var currentDate = Date().dateOnly()
 
   var style = CalendarStyle()
 

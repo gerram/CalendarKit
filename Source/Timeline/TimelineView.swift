@@ -234,7 +234,7 @@ public class TimelineView: UIView, ReusableView {
         }
     }
     
-  func layoutNowLine() {
+  public func layoutNowLine() {
     if !isToday {
       nowLine.alpha = 0
     } else {
