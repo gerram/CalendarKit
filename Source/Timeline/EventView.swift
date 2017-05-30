@@ -8,6 +8,7 @@ protocol EventViewDelegate: class {
 }
 
 public protocol EventDescriptor: class {
+    var allDay: Bool {get}
   var datePeriod: TimePeriod {get}
   var text: String {get}
   var color: UIColor {get}

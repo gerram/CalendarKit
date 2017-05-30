@@ -3,6 +3,7 @@ import DateToolsSwift
 import DynamicColor
 
 open class Event: EventDescriptor {
+    public var allDay = false
   public var datePeriod = TimePeriod()
   public var text = ""
   public var color = UIColor.blue {

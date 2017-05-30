@@ -38,6 +38,13 @@ public struct TimeLineHoursPayload {
     }
 }
 
+public struct TimeLineAllDaySection {
+    var title: String = "Весь день"
+    var textColor: UIColor = UIColor.black
+    var background: UIColor = UIColor.white
+    var height: CGFloat = 80.0
+}
+
 public class TimelineView: UIView, ReusableView {
 
   weak var delegate: TimelineViewDelegate?
@@ -79,6 +86,7 @@ public class TimelineView: UIView, ReusableView {
     
     var timeLineInterval: TimeLineInterval = TimeLineInterval.TimeLineInterval1Hour
     var timeLineHoursPayload: TimeLineHoursPayload = TimeLineHoursPayload()
+    var timeLineAllDaySection: TimeLineAllDaySection? = TimeLineAllDaySection()
 
   var verticalDiff: CGFloat = 45
   var verticalInset: CGFloat = 10
@@ -112,7 +120,12 @@ public class TimelineView: UIView, ReusableView {
 
   var times: [String] {
     //return is24hClock ? _24hTimes : _12hTimes
-    return is24hClock ? Generator.timeString24H_MIN(by: self.timeLineInterval) : _12hTimes
+    
+    var timeLineStrings:[String] = is24hClock ? Generator.timeString24H_MIN(by: self.timeLineInterval) : _12hTimes
+    if self.timeLineAllDaySection != nil {
+        timeLineStrings.insert(self.timeLineAllDaySection!.title, at: 0)
+    }
+    return timeLineStrings
   }
 
   fileprivate lazy var _12hTimes: [String] = Generator.timeStrings12H()
@@ -198,11 +211,36 @@ public class TimelineView: UIView, ReusableView {
                           NSForegroundColorAttributeName: self.style.timeColor,
                           NSFontAttributeName: timeFont] as [String : Any]
         
+        let isAllDaySection = self.timeLineAllDaySection != nil
+        let allDaySectionHeight = isAllDaySection ? self.timeLineAllDaySection!.height : 0
         for (i, time) in times.enumerated() {
+            
+            if (i == 0 && self.timeLineAllDaySection != nil) {
+                let iFloat = CGFloat(i)
+                let context = UIGraphicsGetCurrentContext()
+                context?.interpolationQuality = .none
+                context?.saveGState()
+                context?.setStrokeColor(self.style.lineColor.cgColor)
+                context?.setLineWidth(onePixel)
+                context?.translateBy(x: 0, y: 0.5)
+                let x: CGFloat = 53
+                let y = verticalInset + iFloat * verticalDiff
+                context?.beginPath()
+                context?.move(to: CGPoint(x: x, y: y))
+                context?.addLine(to: CGPoint(x: (bounds).width, y: y))
+                context?.strokePath()
+                context?.restoreGState()
+                
+                let timeRect = CGRect(x: 2, y: iFloat * verticalDiff + verticalInset - 7, width: leftInset - 8, height: fontSize * 3 + 2)
+                
+                let timeString = NSString(string: time)
+                
+                timeString.draw(in: timeRect, withAttributes: attributes)
+            }
+            
             if self.timeLineHoursPayload.checkTime(time: time) {
                 let iFloat = CGFloat(i)
                 let context = UIGraphicsGetCurrentContext()
-                //context!.interpolationQuality = .none
                 context?.interpolationQuality = .none
                 context?.saveGState()
                 context?.setStrokeColor(self.style.lineColor.cgColor)
@@ -210,22 +248,16 @@ public class TimelineView: UIView, ReusableView {
                 context?.translateBy(x: 0, y: 0.5)
                 let x: CGFloat = 53
                 //let y = verticalInset + iFloat * verticalDiff
-                let y = verticalInset + (iFloat - CGFloat(self.timeLineHoursPayload.startHour * self.timeLineInterval.rawValue)) * verticalDiff
+                let y = (iFloat - CGFloat(self.timeLineHoursPayload.startHour * self.timeLineInterval.rawValue + (isAllDaySection ? 1 : 0 ))) * verticalDiff + verticalInset + allDaySectionHeight
                 context?.beginPath()
                 context?.move(to: CGPoint(x: x, y: y))
                 context?.addLine(to: CGPoint(x: (bounds).width, y: y))
                 context?.strokePath()
                 context?.restoreGState()
                 
-                //print("\(i)")
-                /*
-                if i == hourToRemoveIndex {
-                    continue
-                }
-                */
-                
                 //let timeRect = CGRect(x: 2, y: iFloat * verticalDiff + verticalInset - 7, width: leftInset - 8, height: fontSize + 2)
-                let timeRect = CGRect(x: 2, y: (iFloat - CGFloat(self.timeLineHoursPayload.startHour * self.timeLineInterval.rawValue)) * verticalDiff + verticalInset - 7, width: leftInset - 8, height: fontSize + 2)
+                let timeRectY = (iFloat - CGFloat(self.timeLineHoursPayload.startHour * self.timeLineInterval.rawValue + (isAllDaySection ? 1 : 0))) * verticalDiff + verticalInset - 7 + allDaySectionHeight
+                let timeRect = CGRect(x: 2, y: timeRectY, width: leftInset - 8, height: fontSize + 2)
                 
                 let timeString = NSString(string: time)
                 
@@ -258,52 +290,59 @@ public class TimelineView: UIView, ReusableView {
     }
   }
 
-  func recalculateEventLayout() {
-    let day = TimePeriod(beginning: date.dateOnly(),
-                         chunk: TimeChunk(seconds: 0,
-                                          minutes: 0,
-                                          hours: 0,
-                                          days: 1,
-                                          weeks: 0,
-                                          months: 0,
-                                          years: 0))
-
-    let validEvents = eventDescriptors.filter {$0.datePeriod.overlaps(with: day)}
-      .sorted {$0.datePeriod.beginning!.isEarlier(than: $1.datePeriod.beginning!)}
-
-    var groupsOfEvents = [[EventDescriptor]]()
-    var overlappingEvents = [EventDescriptor]()
-
-    for event in validEvents {
-      if overlappingEvents.isEmpty {
-        overlappingEvents.append(event)
-        continue
-      }
-      if overlappingEvents.last!.datePeriod.overlaps(with: event.datePeriod) {
-        overlappingEvents.append(event)
-        continue
-      } else {
+    func recalculateEventLayout() {
+        let day = TimePeriod(beginning: date.dateOnly(),
+                             chunk: TimeChunk(seconds: 0,
+                                              minutes: 0,
+                                              hours: 0,
+                                              days: 1,
+                                              weeks: 0,
+                                              months: 0,
+                                              years: 0))
+        
+        let validEvents = eventDescriptors.filter {$0.datePeriod.overlaps(with: day)}
+            .sorted {$0.datePeriod.beginning!.isEarlier(than: $1.datePeriod.beginning!)}
+        
+        var groupsOfEvents = [[EventDescriptor]]()
+        var overlappingEvents = [EventDescriptor]()
+        
+        for event in validEvents {
+            if overlappingEvents.isEmpty {
+                overlappingEvents.append(event)
+                continue
+            }
+            if overlappingEvents.last!.datePeriod.overlaps(with: event.datePeriod) {
+                overlappingEvents.append(event)
+                continue
+            } else {
+                groupsOfEvents.append(overlappingEvents)
+                overlappingEvents.removeAll()
+                overlappingEvents.append(event)
+            }
+        }
+        
         groupsOfEvents.append(overlappingEvents)
         overlappingEvents.removeAll()
-        overlappingEvents.append(event)
-      }
+        
+        for overlappingEvents in groupsOfEvents {
+            let totalCount = CGFloat(overlappingEvents.count)
+            for (index, event) in overlappingEvents.enumerated() {
+                
+                let floatIndex = CGFloat(index)
+                let x = leftInset + floatIndex / totalCount * calendarWidth
+                let equalWidth = calendarWidth / totalCount
+                
+                if event.allDay {
+                    event.frame = CGRect(x: x, y: verticalInset, width: equalWidth, height: self.timeLineAllDaySection?.height ?? 0)
+                } else {
+                    let startY = dateToY(event.datePeriod.beginning!)
+                    let endY = dateToY(event.datePeriod.end!)
+                    event.frame = CGRect(x: x, y: startY, width: equalWidth, height: endY - startY)
+                }
+                
+            }
+        }
     }
-
-    groupsOfEvents.append(overlappingEvents)
-    overlappingEvents.removeAll()
-
-    for overlappingEvents in groupsOfEvents {
-      let totalCount = CGFloat(overlappingEvents.count)
-      for (index, event) in overlappingEvents.enumerated() {
-        let startY = dateToY(event.datePeriod.beginning!)
-        let endY = dateToY(event.datePeriod.end!)
-        let floatIndex = CGFloat(index)
-        let x = leftInset + floatIndex / totalCount * calendarWidth
-        let equalWidth = calendarWidth / totalCount
-        event.frame = CGRect(x: x, y: startY, width: equalWidth, height: endY - startY)
-      }
-    }
-  }
 
   func prepareEventViews() {
     for _ in 0...eventDescriptors.endIndex {
@@ -328,22 +367,35 @@ public class TimelineView: UIView, ReusableView {
     return 1 / UIScreen.main.scale
   }
 
-  fileprivate func dateToY(_ date: Date) -> CGFloat {
-    if date.dateOnly() > self.date.dateOnly() {
-      // Event ending the next day
-      //return 24 * verticalDiff + verticalInset
-      //return (24 * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
-      return (CGFloat(self.timeLineHoursPayload.payload.count) * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
-    } else if date.dateOnly() < self.date.dateOnly() {
-      // Event starting the previous day
-      return verticalInset
-    } else {
-      //let hourY = CGFloat(date.hour) * verticalDiff + verticalInset
-      //let hourY = CGFloat(date.hour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
-      let hourY = CGFloat(date.hour - self.timeLineHoursPayload.startHour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
-      //let minuteY = CGFloat(date.minute) * verticalDiff / 60
-      let minuteY = CGFloat(date.minute) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) / 60
-      return hourY + minuteY
+    fileprivate func dateToY(_ date: Date) -> CGFloat {
+        
+        let isAllDaySection = self.timeLineAllDaySection != nil
+        let allDaySectionHeight = isAllDaySection ? self.timeLineAllDaySection!.height : 0
+        
+        
+        if date.dateOnly() > self.date.dateOnly() {
+            // Event ending the next day
+            //return 24 * verticalDiff + verticalInset
+            //return (24 * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
+            return (CGFloat(self.timeLineHoursPayload.payload.count) * CGFloat(self.timeLineInterval.rawValue)) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset + allDaySectionHeight
+        } else if date.dateOnly() < self.date.dateOnly() {
+            // Event starting the previous day
+            return verticalInset
+        } else {
+            
+            /*
+            if allDay {
+                let hourY = verticalInset
+                return hourY
+            }
+            */
+            
+            //let hourY = CGFloat(date.hour) * verticalDiff + verticalInset
+            //let hourY = CGFloat(date.hour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset
+            let hourY = CGFloat(date.hour - self.timeLineHoursPayload.startHour) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) + verticalInset + allDaySectionHeight
+            //let minuteY = CGFloat(date.minute) * verticalDiff / 60
+            let minuteY = CGFloat(date.minute) * (verticalDiff * CGFloat(self.timeLineInterval.rawValue)) / 60
+            return hourY + minuteY
+        }
     }
-  }
 }
