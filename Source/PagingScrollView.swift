@@ -45,7 +45,7 @@ class PagingScrollView<T: UIView>: UIScrollView, UIScrollViewDelegate where T: R
     showsVerticalScrollIndicator = false
     delegate = self
   }
-
+   
   override func layoutSubviews() {
     super.layoutSubviews()
     realignViews()

@@ -2,6 +2,11 @@ import UIKit
 import DateToolsSwift
 
 open class DayViewController: UIViewController, DayViewDataSource, DayViewDelegate {
+    
+    open func dayView(dayView: DayView, wantsToRefresh: Bool) {
+        //
+    }
+
 
   public lazy var dayView: DayView = DayView()
 

@@ -12,6 +12,7 @@ public protocol DayViewDelegate: class {
   func dayViewDidLongPressTimelineAtHour(_ hour: Int)
   func dayView(dayView: DayView, willMoveTo date: Date)
   func dayView(dayView: DayView, didMoveTo  date: Date)
+    func dayView(dayView: DayView, wantsToRefresh: Bool)
 }
 
 public class DayView: UIView {
@@ -53,6 +54,19 @@ public class DayView: UIView {
     // Any view is fine as they are all synchronized
     return timelinePager.reusableViews.first?.contentOffset ?? CGPoint()
   }
+
+    /*
+    public var timelineRefreshControl: UIRefreshControl? {
+        if #available(iOS 10.0, *) {
+            guard let refreshControl = (timelinePager.reusableViews[Int(timelinePager.currentScrollViewPage)] as? TimelineContainer)?.refreshControl else {
+                return nil
+            }
+        } else {
+            // Fallback on earlier versions
+        }
+        return refreshControl        
+    }
+    */
 
   static let headerVisibleHeight: CGFloat = 88
   var headerHeight: CGFloat = headerVisibleHeight
@@ -147,6 +161,12 @@ public class DayView: UIView {
                                                 years: 0))
 
       let verticalScrollView = TimelineContainer()
+        
+        //MARK: Call back when pull to refresh starting
+        verticalScrollView.timeLineContainerRefreshCompletion = {
+            self.delegate?.dayView(dayView: self, wantsToRefresh: true)
+        }
+        
       verticalScrollView.timeline = timeline
       verticalScrollView.addSubview(timeline)
       verticalScrollView.contentSize = timeline.frame.size
