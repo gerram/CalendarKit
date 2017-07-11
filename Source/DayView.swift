@@ -67,6 +67,7 @@ public class DayView: UIView {
         return refreshControl        
     }
     */
+    
 
   static let headerVisibleHeight: CGFloat = 88
   var headerHeight: CGFloat = headerVisibleHeight
@@ -77,7 +78,21 @@ public class DayView: UIView {
   var timelinePager = PagingScrollView<TimelineContainer>()
   var timelineSynchronizer: ScrollSynchronizer?
 
-  public var currentDate = Date().dateOnly()
+  //public var currentDate = Date().dateOnly()
+    private var _currentDate: Date?
+    public var currentDate: Date {
+        get {
+            if _currentDate == nil {
+                _currentDate = Date().dateOnly()
+            }
+            return _currentDate!
+        }
+        set {
+            _currentDate = newValue
+            print("Current date changes to \(newValue.dateOnly())")
+        }
+        
+    }
 
   var style = CalendarStyle()
 
@@ -142,7 +157,18 @@ public class DayView: UIView {
     // Any view is fine as they are all synchronized
     timelinePager.reusableViews.first?.scrollTo(hour24: hour24)
   }
-
+    
+    public func stopRefreshControl() {
+        if let timelinecontainer: TimelineContainer = timelinePager.reusableViews[Int(timelinePager.currentScrollViewPage)] as? TimelineContainer {
+            if #available(iOS 10.0, *) {
+                timelinecontainer.refreshControl?.endRefreshing()
+                timelinecontainer.setContentOffset(CGPoint.zero, animated: true)
+            } else {
+                // Fallback on earlier versions
+            }
+        }
+    }
+    
   func configureTimelinePager() {
     var verticalScrollViews = [TimelineContainer]()
     for i in -1...1 {

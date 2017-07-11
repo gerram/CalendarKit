@@ -149,7 +149,12 @@ extension DayHeaderView: PagingScrollViewDelegate {
   func scrollviewDidScrollToViewAtIndex(_ index: Int) {
     let activeView = pagingScrollView.reusableViews[index]
     activeView.selectedIndex = currentWeekdayIndex
-    swipeLabelView.date = activeView.selectedDate!
-    delegate?.dateHeaderDateChanged(activeView.selectedDate!)
+    
+    //swipeLabelView.date = activeView.selectedDate!
+    //delegate?.dateHeaderDateChanged(activeView.selectedDate!)
+    if let selectedDate = activeView.selectedDate {
+        swipeLabelView.date = selectedDate
+        delegate?.dateHeaderDateChanged(selectedDate)
+    }
   }
 }
